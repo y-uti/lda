@@ -1,6 +1,10 @@
 # lda
 
-Hack で LDA を実装してみたものです。
+Hack での LDA の実装。
+
+「第二回機械学習アルゴリズム実装会」で作ったものです。
+
+http://mlhackathon.connpass.com/event/6586/
 
 ### 実行方法
 
