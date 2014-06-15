@@ -155,7 +155,7 @@ class LDA {
     private function sample(int $m, string $w) : int
     {
         $total = 0;
-        $cfreq = array();
+        $cfreq = Vector {};
         for ($t = 0; $t < $this->k; ++$t) {
             $td = $this->ntd[$m][$t] + $this->a;
             $wt_numer = $this->nwt[$t][$w] + $this->b;
