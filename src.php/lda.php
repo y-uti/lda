@@ -1,7 +1,7 @@
 <?php
 
-require_once 'read_documents.php';
-// require_once 'read_documents_raw.php';
+// require_once 'read_documents.php';
+require_once 'read_documents_raw.php';
 require_once 'write_results.php';
 
 class LDA {
@@ -197,8 +197,8 @@ function main($argc, $argv)
         return;
     }
 
-    $w = read_documents($argv[1]);
-    // $w = read_documents_raw($argv[1]);
+    // $w = read_documents($argv[1]);
+    $w = read_documents_raw($argv[1]);
     $k = $argv[2];
     $n = $argc > 3 ? $argv[3] : 100;
     $a = $argc > 5 ? $argv[4] : 0.1;

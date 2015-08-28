@@ -2,12 +2,14 @@
 
 function read_documents_raw($filename)
 {
-    $w = array();
+    $words = array();
 
     $lines = file($filename, FILE_IGNORE_NEW_LINES);
     for ($i = 0; $i < count($lines); ++$i) {
-        $w[] = explode(' ', $lines[$i]);
+        $words[] = array_map(function ($word) {
+            return ":$word";
+        }, explode(' ', $lines[$i]));
     }
 
-    return $w;
+    return $words;
 }

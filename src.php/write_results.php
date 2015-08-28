@@ -11,7 +11,7 @@ function write_topic_word_freq($matrix, $delimiter = ' ')
 {
     $words = array_keys($matrix[0]);
     foreach ($words as $w) {
-        echo $w;
+        echo substr($w, 1);
         $sep = "\t";
         foreach ($matrix as $vector) {
             echo $sep . $vector[$w];

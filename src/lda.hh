@@ -1,7 +1,7 @@
 <?hh
 
-require_once 'read_documents.hh';
-// require_once 'read_documents_raw.hh';
+// require_once 'read_documents.hh';
+require_once 'read_documents_raw.hh';
 require_once 'write_results.hh';
 
 class LDA {
@@ -182,8 +182,8 @@ function main(int $argc, array<string> $argv) : void
         return;
     }
 
-    $w = read_documents($argv[1]);
-    // $w = read_documents_raw($argv[1]);
+    // $w = read_documents($argv[1]);
+    $w = read_documents_raw($argv[1]);
     $k = (int) $argv[2];
     $n = $argc > 3 ? (int) $argv[3] : 100;
     $a = $argc > 5 ? (float) $argv[4] : 0.1;
