@@ -4,8 +4,11 @@
 require_once 'read_documents_raw.php';
 require_once 'write_results.php';
 
-class LDA
+class Particle
 {
+    private $root;
+    private $parent;
+
     private $k;
     private $alpha;
     private $beta;
@@ -14,16 +17,23 @@ class LDA
     private $nwt;
     private $nt;
 
+    private $wordTypes;
+
     private $logWeight;
 
     public function __construct($k, $alpha, $beta)
     {
+        $this->root = $this;
+        $this->parent = null;
+
         $this->k = $k;
         $this->alpha = $alpha;
         $this->beta = $beta;
 
         $this->nwt = [];
         $this->nt = array_fill(0, $this->k, 0);
+
+        $this->wordTypes = [];
         $this->logWeight = 0;
     }
 
@@ -37,9 +47,17 @@ class LDA
         return $this->ntd;
     }
 
-    public function getWordTopicCounts()
+    public function getTopicCountsOfWord($word)
     {
-        return $this->nwt;
+        if (array_key_exists($word, $this->nwt)) {
+            return $this->nwt[$word];
+        }
+
+        if ($this->parent) {
+            return $this->parent->getTopicCountsOfWord($word);
+        }
+
+        return array_fill(0, $this->k, 0);
     }
 
     public function prepareForNewDocument()
@@ -50,7 +68,8 @@ class LDA
     public function processNextWord($word)
     {
         if (!array_key_exists($word, $this->nwt)) {
-            $this->nwt[$word] = array_fill(0, $this->k, 0);
+            $this->nwt[$word] = $this->getTopicCountsOfWord($word);
+            $this->root->wordTypes[$word] = true;
         }
 
         $topic = $this->sample($word);
@@ -60,11 +79,12 @@ class LDA
         ++$this->nt[$topic];
     }
 
-    public function clone()
+    public function cloneParticle()
     {
-        $newParticle = new LDA($this->k, $this->alpha, $this->beta);
+        $newParticle = new Particle($this->k, $this->alpha, $this->beta);
+        $newParticle->root = $this->root;
+        $newParticle->parent = $this;
         $newParticle->ntd = $this->ntd;
-        $newParticle->nwt = $this->nwt;
         $newParticle->nt = $this->nt;
 
         return $newParticle;
@@ -73,13 +93,13 @@ class LDA
     private function sample($word)
     {
         $total = 0;
-        $nWordTypes = count($this->nwt);
+        $nWordTypes = count($this->root->wordTypes);
         $cfreq = array();
 
         $td_denom = array_sum($this->ntd) + $this->k * $this->alpha;
         for ($t = 0; $t < $this->k; ++$t) {
             $td_numer = $this->ntd[$t] + $this->alpha;
-            $wt_numer = $this->nwt[$word][$t] + $this->beta;
+            $wt_numer = $this->getTopicCountsOfWord($word)[$t] + $this->beta;
             $wt_denom = $this->nt[$t] + $nWordTypes * $this->beta;
             $freq = $td_numer * $wt_numer / ($td_denom * $wt_denom);
             $total += $freq;
@@ -100,7 +120,7 @@ class LDA
 
 function main($argc, $argv)
 {
-    if ($argc < 2) {
+    if ($argc < 5) {
         echo "Usage: $argv[0] filename k S R [ess-threshold [alpha beta]]\n";
         return;
     }
@@ -118,18 +138,16 @@ function main($argc, $argv)
     $nDocuments = count($documents);
 
     for ($i = 0; $i < $nDocuments; ++$i) {
-        // echo "Process documents ($i / $nDocuments)\n";
-        $document = $documents[$i];
+        fputs(STDERR, "Process documents ($i / $nDocuments)\n");
         prepareForNewDocument($particles);
-        foreach ($document as $word) {
+        foreach ($documents[$i] as $word) {
             processNextWord($particles, $word);
             $ess = calculateEss($particles);
             if ($ess < $threshold) {
                 $particles = resample($particles);
             }
         }
-        $topics = getDocTopicFreq($particles, $k, $s);
-        echo implode(',', $topics) . "\n";
+        echo implode(' ', getDocTopicFreq($particles, $k, $s)) . "\n";
     }
 }
 
@@ -137,7 +155,7 @@ function createParticles($nParticles, $nTopics, $alpha, $beta)
 {
     $particles = [];
     for ($i = 0; $i < $nParticles; ++$i) {
-        $particles[$i] = new LDA($nTopics, $alpha, $beta);
+        $particles[$i] = new Particle($nTopics, $alpha, $beta);
     }
 
     return $particles;
@@ -199,7 +217,7 @@ function resample($particles)
         $r = $r < $totalWeight ? $r : 0;
         for ($i = 0; $i < count($cumulativeWeights); ++$i) {
             if ($r < $cumulativeWeights[$i]) {
-                $newParticles[] = $particles[$i]->clone();
+                $newParticles[] = $particles[$i]->cloneParticle();
                 break;
             }
         }
