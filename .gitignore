@@ -1,2 +1,3 @@
-data/
-src/.hhconfig
+composer.phar
+src.hh/.hhconfig
+vendor/
