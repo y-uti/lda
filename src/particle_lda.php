@@ -17,11 +17,15 @@ class Particle
     private $nwt;
     private $nt;
 
+    private $maxReentDocuments;
+    private $recentDocuments;
+    private $recentTopics;
+
     private $wordTypes;
 
     private $logWeight;
 
-    public function __construct($k, $alpha, $beta)
+    public function __construct($k, $alpha, $beta, $maxRecentDocuments = 20)
     {
         $this->root = $this;
         $this->parent = null;
@@ -35,6 +39,10 @@ class Particle
 
         $this->wordTypes = [];
         $this->logWeight = 0;
+
+        $this->maxRecentDocuments = $maxRecentDocuments;
+        $this->recentDocuments = [];
+        $this->recentTopics = [];
     }
 
     public function getLogWeight()
@@ -63,6 +71,12 @@ class Particle
     public function prepareForNewDocument()
     {
         $this->ntd = array_fill(0, $this->k, 0);
+        if (count($this->recentDocuments) === $this->maxRecentDocuments) {
+            array_shift($this->recentDocuments);
+            array_shift($this->recentTopics);
+        }
+        $this->recentDocuments[] = [];
+        $this->recentTopics[] = [];
     }
 
     public function processNextWord($word)
@@ -77,15 +91,26 @@ class Particle
         ++$this->ntd[$topic];
         ++$this->nwt[$word][$topic];
         ++$this->nt[$topic];
+
+        $di = count($this->recentDocuments);
+        $this->recentDocuments[$di - 1][] = $word;
+        $this->recentTopics[$di - 1][] = $topic;
     }
 
     public function cloneParticle()
     {
-        $newParticle = new Particle($this->k, $this->alpha, $this->beta);
+        $newParticle = new Particle(
+            $this->k,
+            $this->alpha,
+            $this->beta,
+            $this->maxRecentDocuments
+        );
         $newParticle->root = $this->root;
         $newParticle->parent = $this;
         $newParticle->ntd = $this->ntd;
         $newParticle->nt = $this->nt;
+        $newParticle->recentDocuments = $this->recentDocuments;
+        $newParticle->recentTopics = $this->recentTopics;
 
         return $newParticle;
     }
@@ -116,6 +141,50 @@ class Particle
         }
         return $this->k - 1;
     }
+
+    public function getIndexAtRandom()
+    {
+        $total = 0;
+        foreach ($this->recentDocuments as $document) {
+            $total += count($document);
+        }
+
+        $wi = intval(mt_rand() / mt_getrandmax() * $total);
+        for ($di = 0; $di < count($this->recentDocuments); ++$di) {
+            $document = $this->recentDocuments[$di];
+            if ($wi < count($document)) {
+                return [$di, $wi];
+            }
+            $wi -= count($document);
+        }
+    }
+
+    public function rejuvenate($docIndex, $wordIndex)
+    {
+        $word = $this->recentDocuments[$docIndex][$wordIndex];
+        $topic = $this->recentTopics[$docIndex][$wordIndex];
+
+        if (!array_key_exists($word, $this->nwt)) {
+            $this->nwt[$word] = $this->getTopicCountsOfWord($word);
+            $this->root->wordTypes[$word] = true;
+        }
+
+        if ($docIndex === count($this->recentDocuments) - 1) {
+            --$this->ntd[$topic];
+        }
+        --$this->nwt[$word][$topic];
+        --$this->nt[$topic];
+
+        $topic = $this->sample($word);
+
+        if ($docIndex === count($this->recentDocuments) - 1) {
+            ++$this->ntd[$topic];
+        }
+        ++$this->nwt[$word][$topic];
+        ++$this->nt[$topic];
+
+        $this->recentTopics[$docIndex][$wordIndex] = $topic;
+    }
 }
 
 function main($argc, $argv)
@@ -145,6 +214,9 @@ function main($argc, $argv)
             $ess = calculateEss($particles);
             if ($ess < $threshold) {
                 $particles = resample($particles);
+                for ($ri = 0; $ri < $r; ++$ri) {
+                    rejuvenate($particles);
+                }
             }
         }
         echo implode(' ', getDocTopicFreq($particles, $k, $s)) . "\n";
@@ -245,6 +317,14 @@ function getWeights($particles)
     );
 
     return $weights;
+}
+
+function rejuvenate($particles)
+{
+    list ($di, $wi) = $particles[0]->getIndexAtRandom();
+    foreach ($particles as $particle) {
+        $particle->rejuvenate($di, $wi);
+    }
 }
 
 function getDocTopicFreq($particles, $k, $s)
