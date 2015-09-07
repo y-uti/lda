@@ -1,0 +1,10 @@
+#!/usr/bin/env php
+<?php
+require_once __DIR__ . '/../vendor/autoload.php';
+
+$app = new \Symfony\Component\Console\Application();
+$app->addCommands([
+    new \YUti\Lda\Command\LdaCommand(),
+]);
+
+$app->run();

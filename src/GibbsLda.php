@@ -1,11 +1,8 @@
 <?php
+namespace YUti\Lda;
 
-// require_once 'read_documents.php';
-require_once 'read_documents_raw.php';
-require_once 'write_results.php';
-
-class LDA {
-
+class GibbsLda
+{
     private $k;
     private $a;
     private $b;
@@ -19,24 +16,24 @@ class LDA {
     private $nt;
     private $v;
 
-    function __construct($k, $a, $b)
+    public function __construct($k, $a, $b)
     {
         $this->k = $k;
         $this->a = $a;
         $this->b = $b;
     }
 
-    function getDocTopicFreq()
+    public function getDocTopicFreq()
     {
         return $this->ntd;
     }
 
-    function getTopicWordFreq()
+    public function getTopicWordFreq()
     {
         return $this->nwt;
     }
 
-    function setData($w)
+    public function setData($w)
     {
         $this->w = $w;
         $this->initialize();
@@ -44,13 +41,13 @@ class LDA {
 
     private function initialize()
     {
-        $this->initialize_z();
-        $this->initialize_u();
-        $this->initialize_ntd();
-        $this->initialize_nwt();
+        $this->initializeZ();
+        $this->initializeU();
+        $this->initializeNtd();
+        $this->initializeNwt();
     }
 
-    private function initialize_z()
+    private function initializeZ()
     {
         $w = $this->w;
         $k = $this->k;
@@ -66,7 +63,7 @@ class LDA {
         $this->z = $z;
     }
 
-    private function initialize_u()
+    private function initializeU()
     {
         $u = array();
         foreach ($this->w as $doc) {
@@ -81,7 +78,7 @@ class LDA {
         $this->v = count($u);
     }
 
-    private function initialize_ntd()
+    private function initializeNtd()
     {
         $z = $this->z;
         $k = $this->k;
@@ -97,7 +94,7 @@ class LDA {
         $this->ntd = $ntd;
     }
 
-    private function initialize_nwt()
+    private function initializeNwt()
     {
         $z = $this->z;
         $w = $this->w;
@@ -126,7 +123,7 @@ class LDA {
         $this->nt = $nt;
     }
 
-    private function get_words($w)
+    private function getWords($w)
     {
         $words = array();
         foreach ($w as $doc) {
@@ -140,7 +137,7 @@ class LDA {
         return $words;
     }
 
-    function update()
+    public function update()
     {
         $w = $this->w;
         for ($m = 0; $m < count($w); ++$m) {
@@ -189,33 +186,3 @@ class LDA {
         return $this->k - 1;
     }
 }
-
-function main($argc, $argv)
-{
-    if ($argc < 2) {
-        echo "Usage: $argv[0] filename k [iter [alpha beta]]\n";
-        return;
-    }
-
-    // $w = read_documents($argv[1]);
-    $w = read_documents_raw($argv[1]);
-    $k = $argv[2];
-    $n = $argc > 3 ? $argv[3] : 100;
-    $a = $argc > 5 ? $argv[4] : 0.1;
-    $b = $argc > 5 ? $argv[5] : 0.01;
-
-    $lda = new LDA($k, $a, $b);
-    $lda->setData($w);
-    for ($i = 0; $i < $n; ++$i) {
-        fputs(STDERR, "Iteration " . ($i + 1) . " / $n\n");
-        $lda->update();
-    }
-
-    $ntd = $lda->getDocTopicFreq();
-    $nwt = $lda->getTopicWordFreq();
-
-    write_doc_topic_freq($ntd);
-    write_topic_word_freq($nwt);
-}
-
-main($argc, $argv);
