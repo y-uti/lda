@@ -5,13 +5,11 @@ class CorpusReader
 {
     public function read($filename)
     {
-        $corpus = array();
+        $corpus = new Corpus();
 
-        $lines = file($filename, FILE_IGNORE_NEW_LINES);
-        for ($i = 0; $i < count($lines); ++$i) {
-            $corpus[] = array_map(function ($word) {
-                return ":$word";
-            }, explode(' ', $lines[$i]));
+        $documents = file($filename, FILE_IGNORE_NEW_LINES);
+        foreach ($documents as $document) {
+            $corpus->addDocument(explode(' ', $document));
         }
 
         return $corpus;

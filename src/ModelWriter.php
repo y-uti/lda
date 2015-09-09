@@ -10,17 +10,20 @@ class ModelWriter
         }
     }
 
-    public function writeTopicWordFreq($matrix, $delimiter = ' ')
+    public function writeTopicWordFreq($corpus, $matrix, $delimiter = ' ')
     {
-        $words = array_keys($matrix[0]);
-        foreach ($words as $w) {
-            echo substr($w, 1);
-            $sep = "\t";
-            foreach ($matrix as $vector) {
-                echo $sep . $vector[$w];
-                $sep = $delimiter;
-            }
-            echo "\n";
+        $wordTypes = $corpus->getWordTypes();
+        for ($i = 0; $i < count($wordTypes); ++$i) {
+            echo $wordTypes[$i] . "\t" .
+            implode(
+                $delimiter,
+                array_map(
+                    function ($vector) use ($i) {
+                        return $vector[$i];
+                    },
+                    $matrix
+                )
+            ) . "\n";
         }
     }
 }

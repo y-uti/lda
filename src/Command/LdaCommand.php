@@ -58,13 +58,14 @@ class LdaCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $corpus = $input->getArgument('corpus');
+        $corpusFile = $input->getArgument('corpus');
         $k = intval($input->getArgument('topics'));
         $n = intval($input->getOption('iteration'));
         $a = doubleval($input->getOption('alpha'));
         $b = doubleval($input->getOption('beta'));
 
-        $w = (new CorpusReader())->read($corpus);
+        $corpus = (new CorpusReader())->read($corpusFile);
+        $w = $corpus->getDocuments();
 
         $lda = new GibbsLda($k, $a, $b);
         $lda->setData($w);
@@ -80,6 +81,6 @@ class LdaCommand extends Command
 
         $writer = new ModelWriter();
         $writer->writeDocTopicFreq($ntd);
-        $writer->writeTopicWordFreq($nwt);
+        $writer->writeTopicWordFreq($corpus, $nwt);
     }
 }
