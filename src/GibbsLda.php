@@ -16,11 +16,18 @@ class GibbsLda
     private $nwt;
     private $nt;
 
+    private $logger;
+
     public function __construct($k, $a, $b)
     {
         $this->k = $k;
         $this->a = $a;
         $this->b = $b;
+    }
+
+    public function setLogger($logger)
+    {
+        $this->logger = $logger;
     }
 
     public function getDocTopicFreq()
@@ -38,7 +45,7 @@ class GibbsLda
         $this->corpus = $corpus;
         $this->initialize();
         for ($i = 0; $i < $maxIteration; ++$i) {
-            // echo "Iteration " . ($i + 1) . " / $maxIteration\n";
+            $this->logger->info("Iteration " . ($i + 1) . " / $maxIteration");
             $this->update();
         }
     }

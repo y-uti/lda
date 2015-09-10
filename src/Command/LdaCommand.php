@@ -5,6 +5,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Logger\ConsoleLogger;
 use Symfony\Component\Console\Output\OutputInterface;
 use YUti\Lda\CorpusReader;
 use YUti\Lda\GibbsLda;
@@ -58,6 +59,8 @@ class LdaCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        $logger = new ConsoleLogger($output);
+
         $corpusFile = $input->getArgument('corpus');
         $topics = intval($input->getArgument('topics'));
         $iteration = intval($input->getOption('iteration'));
@@ -67,6 +70,8 @@ class LdaCommand extends Command
         $corpus = (new CorpusReader())->read($corpusFile);
 
         $lda = new GibbsLda($topics, $alpha, $beta);
+        $lda->setLogger($logger);
+
         $lda->train($corpus, $iteration);
 
         $ntd = $lda->getDocTopicFreq();
