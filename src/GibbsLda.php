@@ -7,14 +7,14 @@ class GibbsLda
     private $a;
     private $b;
 
-    private $w;
-    private $u;
+    private $corpus;
+    private $documents;
+    private $wordTypeCount;
 
     private $z;
     private $ntd;
     private $nwt;
     private $nt;
-    private $v;
 
     public function __construct($k, $a, $b)
     {
@@ -33,49 +33,31 @@ class GibbsLda
         return $this->nwt;
     }
 
-    public function setData($w)
+    public function train($corpus, $maxIteration)
     {
-        $this->w = $w;
+        $this->corpus = $corpus;
         $this->initialize();
+        for ($i = 0; $i < $maxIteration; ++$i) {
+            // echo "Iteration " . ($i + 1) . " / $maxIteration\n";
+            $this->update();
+        }
     }
 
     private function initialize()
     {
+        $this->wordTypeCount = count($this->corpus->getWordTypes());
+        $this->documents = $this->corpus->getDocuments();
         $this->initializeZ();
-        $this->initializeU();
         $this->initializeNtd();
         $this->initializeNwt();
     }
 
     private function initializeZ()
     {
-        $w = $this->w;
-        $k = $this->k;
-
-        $z = array();
-        for ($m = 0; $m < count($w); ++$m) {
-            $z[$m] = array();
-            for ($n = 0; $n < count($w[$m]); ++$n) {
-                $z[$m][$n] = mt_rand(0, $k - 1);
-            }
-        }
-
-        $this->z = $z;
-    }
-
-    private function initializeU()
-    {
-        $u = array();
-        foreach ($this->w as $doc) {
-            foreach ($doc as $w) {
-                if (!in_array($w, $u)) {
-                    $u[] = $w;
-                }
-            }
-        }
-
-        $this->u = $u;
-        $this->v = count($u);
+        $this->z = $this->documents;
+        array_walk_recursive($this->z, function (&$topic) {
+            $topic = mt_rand(0, $this->k - 1);
+        });
     }
 
     private function initializeNtd()
@@ -97,17 +79,14 @@ class GibbsLda
     private function initializeNwt()
     {
         $z = $this->z;
-        $w = $this->w;
+        $w = $this->documents;
         $k = $this->k;
 
         $nwt = array();
         $nt = array();
-        $words = $this->u;
 
         for ($t = 0; $t < $k; ++$t) {
-            foreach ($words as $wd) {
-                $nwt[$t][$wd] = 0;
-            }
+            $nwt[$t] = array_fill(0, $this->wordTypeCount, 0);
             $nt[$t] = 0;
         }
         for ($d = 0; $d < count($z); ++$d) {
@@ -123,23 +102,9 @@ class GibbsLda
         $this->nt = $nt;
     }
 
-    private function getWords($w)
-    {
-        $words = array();
-        foreach ($w as $doc) {
-            foreach ($doc as $word) {
-                if (!in_array($word, $words)) {
-                    $words[] = $word;
-                }
-            }
-        }
-
-        return $words;
-    }
-
     public function update()
     {
-        $w = $this->w;
+        $w = $this->documents;
         for ($m = 0; $m < count($w); ++$m) {
             for ($n = 0; $n < count($w[$m]); ++$n) {
                 $this->reassign($m, $n);
@@ -150,7 +115,7 @@ class GibbsLda
     private function reassign($m, $n)
     {
         $t = $this->z[$m][$n];
-        $w = $this->w[$m][$n];
+        $w = $this->documents[$m][$n];
 
         --$this->ntd[$m][$t];
         --$this->nwt[$t][$w];
@@ -171,7 +136,7 @@ class GibbsLda
         for ($t = 0; $t < $this->k; ++$t) {
             $td = $this->ntd[$m][$t] + $this->a;
             $wt_numer = $this->nwt[$t][$w] + $this->b;
-            $wt_denom = $this->nt[$t] + $this->v * $this->b;
+            $wt_denom = $this->nt[$t] + $this->wordTypeCount * $this->b;
             $freq = $td * $wt_numer / $wt_denom;
             $total += $freq;
             $cfreq[] = $total;

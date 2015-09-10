@@ -59,22 +59,15 @@ class LdaCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $corpusFile = $input->getArgument('corpus');
-        $k = intval($input->getArgument('topics'));
-        $n = intval($input->getOption('iteration'));
-        $a = doubleval($input->getOption('alpha'));
-        $b = doubleval($input->getOption('beta'));
+        $topics = intval($input->getArgument('topics'));
+        $iteration = intval($input->getOption('iteration'));
+        $alpha = doubleval($input->getOption('alpha'));
+        $beta = doubleval($input->getOption('beta'));
 
         $corpus = (new CorpusReader())->read($corpusFile);
-        $w = $corpus->getDocuments();
 
-        $lda = new GibbsLda($k, $a, $b);
-        $lda->setData($w);
-        for ($i = 0; $i < $n; ++$i) {
-            if ($output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
-                $output->writeln("Iteration " . ($i + 1) . " / $n");
-            }
-            $lda->update();
-        }
+        $lda = new GibbsLda($topics, $alpha, $beta);
+        $lda->train($corpus, $iteration);
 
         $ntd = $lda->getDocTopicFreq();
         $nwt = $lda->getTopicWordFreq();
